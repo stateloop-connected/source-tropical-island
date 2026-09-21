@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#071422" />
+  <title>Tropical Island World</title>
+  <meta name="description" content="A playable low-poly tropical island: climb the volcano, find the hidden lagoon, collect 7 glowing shells and unlock the secret cave." />
+  <style>
+    :root {
+      --glass: rgba(8, 20, 30, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.16);
+      --text: #eaf4fb;
+      --text-dim: #a7bfd0;
+      --accent: #ffd27f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #071422;
+      font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #scene {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+    #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+    /* ---------- HUD ---------- */
+    #hud { visibility: hidden; }
+    #hud.on { visibility: visible; }
+    #title {
+      position: absolute;
+      top: calc(12px + env(safe-area-inset-top));
+      left: calc(16px + env(safe-area-inset-left));
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+    }
+    #phase {
+      position: absolute;
+      top: calc(13px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    #shells {
+      position: absolute;
+      top: calc(12px + env(safe-area-inset-top));
+      right: calc(16px + env(safe-area-inset-right));
+      padding: 6px 12px;
+      border-radius: 12px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+    }
+    #objective {
+      position: absolute;
+      top: calc(52px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: min(84vw, 520px);
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--text-dim);
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+    }
+    #toast {
+      position: absolute;
+      bottom: 32%;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      padding: 10px 18px;
+      border-radius: 14px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      font-size: 15px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ---------- touch controls ---------- */
+    #joystick {
+      position: absolute;
+      bottom: calc(26px + env(safe-area-inset-bottom));
+      left: calc(22px + env(safe-area-inset-left));
+      width: 124px;
+      height: 124px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      pointer-events: auto;
+      touch-action: none;
+    }
+    #joystickKnob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.28);
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      transform: translate(-50%, -50%);
+    }
+    #jumpBtn {
+      position: absolute;
+      bottom: calc(38px + env(safe-area-inset-bottom));
+      right: calc(26px + env(safe-area-inset-right));
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: rgba(255, 210, 127, 0.16);
+      border: 1.5px solid rgba(255, 210, 127, 0.55);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      pointer-events: auto;
+      touch-action: none;
+      font-family: inherit;
+    }
+    #jumpBtn:active { background: rgba(255, 210, 127, 0.32); }
+    @media (pointer: fine) {
+      #joystick { opacity: 0.45; }
+      #jumpBtn { opacity: 0.6; }
+    }
+    @media (max-width: 620px) {
+      #title {
+        max-width: 42vw;
+        font-size: 12px;
+        line-height: 1.2;
+      }
+      #phase {
+        top: calc(46px + env(safe-area-inset-top));
+        left: calc(16px + env(safe-area-inset-left));
+        transform: none;
+      }
+      #shells { font-size: 13px; padding: 6px 10px; }
+      #objective {
+        top: calc(80px + env(safe-area-inset-top));
+        width: max-content;
+        max-width: calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right));
+        padding: 6px 10px;
+        border-radius: 12px;
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      #toast { font-size: 14px; max-width: 88vw; white-space: normal; text-align: center; }
+    }
+
+    /* ---------- start overlay ---------- */
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(120% 90% at 50% 110%, #123a4d 0%, #0a2333 45%, #071422 100%);
+      z-index: 20;
+      transition: opacity 0.6s ease;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .load-card {
+      text-align: center;
+      padding: 28px;
+      max-width: min(88vw, 440px);
+    }
+    .load-card .emoji { font-size: 44px; }
+    .load-card h1 {
+      margin: 10px 0 6px;
+      font-size: clamp(26px, 6vw, 38px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #ffd27f, #7fe0d4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .load-card p {
+      color: var(--text-dim);
+      font-size: 14px;
+      line-height: 1.55;
+      margin-bottom: 20px;
+    }
+    #startBtn {
+      pointer-events: auto;
+      padding: 14px 42px;
+      border-radius: 999px;
+      border: none;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #08222e;
+      background: linear-gradient(90deg, #ffd27f, #ffb35c);
+      box-shadow: 0 8px 28px rgba(255, 178, 92, 0.35);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    #startBtn:disabled { opacity: 0.55; cursor: wait; }
+    #startBtn:active { transform: scale(0.97); }
+    .hint { margin-top: 14px; font-size: 12px; color: var(--text-dim); }
+  </style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="ui">
+    <div id="hud">
+      <div id="title">🌴 TROPICAL ISLAND</div>
+      <div id="phase">DAY</div>
+      <div id="shells">🐚 0/7</div>
+      <div id="objective">Find 7 glowing shells to unlock the secret cave</div>
+      <div id="toast"></div>
+      <div id="joystick"><div id="joystickKnob"></div></div>
+      <button id="jumpBtn" type="button">JUMP</button>
+    </div>
+  </div>
+
+  <div id="loading">
+    <div class="load-card">
+      <div class="emoji">🏝️</div>
+      <h1>Tropical Island</h1>
+      <p>Explore a living low-poly island: white-sand beaches, a palm forest,
+         a climbable volcano and a lagoon hidden behind a waterfall.
+         Collect the 7 glowing shells to reveal the secret cave.</p>
+      <button id="startBtn" type="button">Explore</button>
+      <div class="hint">WASD / joystick to move · Space / JUMP to hop · swim anywhere</div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
