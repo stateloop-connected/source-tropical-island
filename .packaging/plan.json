@@ -1,0 +1,14 @@
+{
+  "build_script": "vite build",
+  "gameplay_or_asset_changes": false,
+  "lockfile": "package-lock.json",
+  "mode": "native_source_build",
+  "repository": "stas4000/tropical-island",
+  "schema_version": 1,
+  "source_changes": [
+    ".packaging/plan.json"
+  ],
+  "status": "ready",
+  "upstream_code_executed_locally": false,
+  "upstream_sha": "44a04b6f1e681d503a543acec03fd56fb03b5917"
+}
